@@ -1,0 +1,8 @@
+.crop-cabbage {
+  background-color: #3c8f5a;
+  border: 2px solid #2f6f47;
+  color: #ffffff;
+}
+.crop-cabbage:hover {
+  filter: brightness(1.05);
+}

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素农场</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #f0f2f5;
+        }
+        
+        .game-container {
+            display: grid;
+            grid-template-columns: 200px 1fr 200px;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .resources-panel {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .game-field {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .field-plot {
+            aspect-ratio: 1;
+            background: #8B4513;
+            border: 2px solid #654321;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #fff;
+            transition: all 0.3s;
+        }
+
+        .field-plot:hover {
+            transform: scale(1.05);
+        }
+
+        .buildings-panel {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .resource-item, .building-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .weather {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        /* 退出顶部栏样式 */
+    .game-exit-bar { position: sticky; top: 0; z-index: 1000; background: rgba(255,255,255,0.95); box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .game-exit-bar .bar-inner { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .game-exit-bar .bar-title { color: #2c3e50; font-weight: 700; }
+    .game-exit-bar .bar-actions { display: flex; gap: 10px; }
+    .exit-btn { padding: 8px 12px; border-radius: 8px; font-weight: 600; text-decoration: none; color: #fff; background: linear-gradient(45deg, #6c5ce7, #a363d9); box-shadow: 0 4px 16px rgba(108,92,231,0.35); }
+    .exit-btn.secondary { background: transparent; color: #6c5ce7; border: 2px solid #6c5ce7; }
+    .exit-btn.secondary:hover { background: #6c5ce7; color: #fff; }
+        /* 浮动技能中转球与面板 */
+        .float-ball { position: fixed; left: calc(100vw - 88px); top: calc(100vh - 120px); width: 56px; height: 56px; border-radius: 50%; background: #6c5ce7; color:#fff; box-shadow: 0 8px 24px rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; font-size: 22px; cursor: grab; z-index: 9999; user-select: none; }
+        .float-ball:active { cursor: grabbing; }
+        .float-panel { position: fixed; min-width: 220px; background:#fff; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 12px; z-index: 9998; display:none; }
+        .float-panel.show { display:block; }
+        .float-panel h4 { margin: 6px 0 8px; font-size: 14px; color:#2c3e50; }
+        .action-row { display:flex; flex-wrap:wrap; gap:8px; }
+        .action-btn { padding:6px 10px; border-radius: 8px; border:1px solid #e0e0e0; background:#f8f9fb; color:#333; cursor:pointer; font-size: 13px; }
+        .action-btn.primary { background:#6c5ce7; color:#fff; border-color:#6c5ce7; }
+        .action-btn:hover { filter:brightness(0.98); }
+        /* i18n toggles */
+    .i18n-en { display: none; }
+    .lang-en .i18n-zh { display: none; }
+    .lang-en .i18n-en { display: inline; }
+    /* language toggle buttons */
+    .lang-toggle { display: flex; gap: 8px; align-items: center; margin-right: 8px; }
+    .lang-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #6c5ce7; background: #fff; color: #6c5ce7; cursor: pointer; }
+    .lang-btn:hover { background: #6c5ce7; color: #fff; }
+
+    /* 作物工具栏样式补齐 */
+    .crop-btn { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .crop-btn.active { border-color: #6c5ce7; background: #f3f2ff; color: #4834d4; }
+    .crop-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  </style>
+    <link rel="stylesheet" href="./styles/crops/cabbage.css">
+    <link rel="stylesheet" href="./styles/crops/carrot.css">
+</head>
+<body>
+  <div class="game-exit-bar">
+    <div class="bar-inner">
+      <div class="bar-title"><span class="i18n-zh">小游戏 · 像素农场</span><span class="i18n-en">Mini Game · Pixel Farm</span></div>
+      <div class="bar-actions">
+          <div class="lang-toggle">
+            <button class="lang-btn" data-lang="zh">中文</button>
+            <button class="lang-btn" data-lang="en">English</button>
+          </div>
+          <a class="exit-btn secondary" href="../中转.html"><span class="i18n-zh">返回游戏中心</span><span class="i18n-en">Game Hub</span></a>
+          <a class="exit-btn" href="../../index.html"><span class="i18n-zh">返回首页</span><span class="i18n-en">Home</span></a>
+        </div>
+    </div>
+  </div>
+    <div class="weather" id="weather">
+        <span class="i18n-zh">天气: 晴朗 ☀️</span><span class="i18n-en">Weather: Sunny ☀️</span>
+    </div>
+
+    <div class="game-container">
+        <div class="resources-panel" id="resources">
+            <h3>资源</h3>
+            <div class="resource-item">金钱: <span id="money">1000</span></div>
+            <div class="resource-item">水资源: <span id="water">100</span></div>
+            <h4>种子:</h4>
+            <div class="resource-item">水稻: <span id="rice-seeds">10</span></div>
+            <div class="resource-item">玉米: <span id="corn-seeds">10</span></div>
+            <div class="resource-item">蔬菜: <span id="vegetable-seeds">10</span></div>
+            <div class="resource-item">果树: <span id="fruit-seeds">5</span></div>
+            <!-- 新增：汇总种子与村庄信息（由脚本实时更新） -->
+            <div class="resource-item" id="seeds">种子：白菜0、胡萝卜0、水稻0、玉米0</div>
+            <div class="resource-item" id="village-info">村庄等级：1 | 粮食总量：0</div>
+        </div>
+
+        <div id="crop-toolbar" style="margin:10px 0; display:flex; gap:8px;"></div>
+        <div class="game-field" id="field"></div>
+
+        <div class="buildings-panel">
+            <h3>建筑</h3>
+            <div class="building-item">
+                农舍 (1000金)
+                <button class="button" onclick="buildStructure('house')">建造</button>
+            </div>
+            <div class="building-item">
+                水井 (500金)
+                <button class="button" onclick="buildStructure('well')">建造</button>
+            </div>
+            <div class="building-item">
+                仓库 (800金)
+                <button class="button" onclick="buildStructure('warehouse')">建造</button>
+            </div>
+            <div class="building-item">
+                市场 (2000金)
+                <button class="button" onclick="buildStructure('market')">建造</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://' + (location.hostname || 'localhost') + ':3000/api';
+        let gameState = {
+            selectedCrop: 'cabbage',
+            fieldIds: Array(12).fill(null),
+            serverFields: [],
+            seeds: {}
+        };
+
+        async function updateWeather() {
+            try {
+                const res = await fetch(API_BASE + '/weather');
+                const data = await res.json();
+                const el = document.getElementById('weather');
+                if (el) {
+                    const map = { sunny: '晴朗 ☀️', rainy: '下雨 🌧️', cloudy: '多云 ☁️', stormy: '暴风雨 ⛈️' };
+                    const zh = map[data.weather] || '晴朗 ☀️';
+                    const enName = (data.weather || 'sunny');
+                    const enTitle = enName.charAt(0).toUpperCase() + enName.slice(1);
+                    el.innerHTML = `<span class="i18n-zh">天气: ${zh}</span><span class="i18n-en">Weather: ${enTitle}</span>`;
+                }
+            } catch (e) { /* 忽略错误 */ }
+        }
+
+        function renderCropToolbar(gameData, villageStatus) {
+            const toolbar = document.getElementById('crop-toolbar');
+            if (!toolbar) return;
+            toolbar.innerHTML = '';
+            const crops = ['cabbage', 'carrot', 'rice', 'corn'];
+            const isEn = document.body.classList.contains('lang-en');
+            const cropNames = {
+                cabbage: { zh: '白菜', en: 'Cabbage' },
+                carrot: { zh: '胡萝卜', en: 'Carrot' },
+                rice: { zh: '水稻', en: 'Rice' },
+                corn: { zh: '玉米', en: 'Corn' }
+            };
+            crops.forEach(type => {
+                if (!gameData.crops[type]) return;
+                const btn = document.createElement('button');
+                btn.className = 'crop-btn';
+                btn.dataset.crop = type;
+                const seedCount = villageStatus.resources?.seeds?.[type] ?? 0;
+                btn.disabled = seedCount <= 0;
+                const name = cropNames[type][isEn ? 'en' : 'zh'];
+                btn.textContent = `${name}(${seedCount})`;
+                btn.onclick = () => {
+                    gameState.selectedCrop = type;
+                    document.querySelectorAll('.crop-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                };
+                toolbar.appendChild(btn);
+            });
+            const active = toolbar.querySelector(`button[data-crop="${gameState.selectedCrop}"]`);
+            if (active) active.classList.add('active');
+        }
+
+        async function updateResources() {
+            const res = await fetch(API_BASE + '/village/status');
+            const data = await res.json();
+            gameState.seeds = data.resources?.seeds || {};
+            gameState.serverFields = data.fields || [];
+            // 更新钱与水显示
+            const moneyEl = document.getElementById('money');
+            if (moneyEl) moneyEl.textContent = data.resources?.money ?? 0;
+            const waterEl = document.getElementById('water');
+            if (waterEl) waterEl.textContent = data.resources?.water ?? 0;
+            // 更新显示：种子、水、钱、村庄等级与粮食
+            const seedsEl = document.getElementById('seeds');
+            if (seedsEl) {
+                seedsEl.textContent = `种子：白菜${gameState.seeds.cabbage||0}、胡萝卜${gameState.seeds.carrot||0}、水稻${gameState.seeds.rice||0}、玉米${gameState.seeds.corn||0}`;
+            }
+            const villageEl = document.getElementById('village-info');
+            if (villageEl && data.village) {
+                villageEl.textContent = `村庄等级：${data.village.level} | 粮食总量：${data.village.grain}`;
+            }
+            updateFieldDisplay();
+        }
+
+        function initializeField() {
+            const fieldElement = document.getElementById('field');
+            if (!fieldElement) return;
+            fieldElement.innerHTML = '';
+            for (let i = 0; i < 12; i++) {
+                const plot = document.createElement('div');
+                plot.className = 'field-plot';
+                fieldElement.appendChild(plot);
+            }
+        }
+
+        function updateFieldDisplay() {
+            const plots = document.getElementsByClassName('field-plot');
+            for (let index = 0; index < plots.length; index++) {
+                const plot = plots[index];
+                plot.classList.remove('crop-cabbage','crop-carrot','crop-rice','crop-corn');
+                const fieldId = gameState.fieldIds[index];
+                if (fieldId == null) { plot.textContent = '🟩'; continue; }
+                const field = gameState.serverFields[fieldId];
+                if (!field || !field.crop_type) { plot.textContent = '🟩'; continue; }
+                const type = field.crop_type;
+                plot.classList.add(`crop-${type}`);
+                if (!field.watered) plot.textContent = '🌱';
+                else if (!field.ready) plot.textContent = '🌿';
+                else plot.textContent = '🧺';
+            }
+        }
+
+        function bindFieldGrid() {
+            const plots = document.getElementsByClassName('field-plot');
+            for (let index = 0; index < plots.length; index++) {
+                const plot = plots[index];
+                plot.onclick = async () => {
+                    const fieldId = gameState.fieldIds[index];
+                    if (fieldId == null) {
+                        await plantCropAt(index);
+                    } else {
+                        const field = gameState.serverFields[fieldId];
+                        if (!field.watered) await waterFieldAt(index);
+                        else if (field.ready) await harvestFieldAt(index);
+                    }
+                };
+            }
+        }
+
+        async function initGameUI() {
+            const gameRes = await fetch(API_BASE + '/game/data');
+            const gameData = await gameRes.json();
+            localStorage.setItem('game_crops', JSON.stringify(gameData.crops));
+            initializeField();
+            await updateResources();
+            const villageStatus = await (await fetch(API_BASE + '/village/status')).json();
+            renderCropToolbar(gameData, villageStatus);
+            bindFieldGrid();
+            updateWeather();
+            setInterval(updateWeather, 15000);
+        }
+
+        async function plantCropAt(index) {
+          const type = gameState.selectedCrop;
+          if (!type) return;
+          const res = await fetch(API_BASE + '/field/plant', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ crop_type: type })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            gameState.fieldIds[index] = data.field_id;
+            await updateResources();
+            const villageStatus = await (await fetch(API_BASE + '/village/status')).json();
+            const gameCrops = { crops: JSON.parse(localStorage.getItem('game_crops')||'{}') };
+            renderCropToolbar(gameCrops, villageStatus);
+          }
+        }
+
+        async function waterFieldAt(index) {
+          const fieldId = gameState.fieldIds[index];
+          if (fieldId == null) return;
+          const res = await fetch(API_BASE + '/field/water', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ field_id: fieldId })
+          });
+          if (res.ok) await updateResources();
+        }
+
+        async function harvestFieldAt(index) {
+          const fieldId = gameState.fieldIds[index];
+          if (fieldId == null) return;
+          const res = await fetch(API_BASE + '/field/harvest', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ field_id: fieldId })
+          });
+          if (res.ok) {
+            gameState.fieldIds[index] = null;
+            await updateResources();
+          }
+        }
+
+        async function buildStructure(type) {
+          const res = await fetch(API_BASE + '/building/build', {
+             method: 'POST', headers: {'Content-Type':'application/json'},
+             body: JSON.stringify({ building_type: type })
+           });
+          if (res.ok) {
+            await updateResources();
+            alert(document.body.classList.contains('lang-en') ? 'Build succeeded' : '建造成功');
+          } else {
+            alert(document.body.classList.contains('lang-en') ? 'Build failed' : '建造失败');
+          }
+        }
+
+        // ESC 快捷键返回游戏中心
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            window.location.href = '../中转.html';
+          }
+        });
+
+        // 语言初始化与切换
+        (function() {
+          const saved = localStorage.getItem('lang');
+          if (saved === 'en') document.body.classList.add('lang-en');
+          document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const lg = btn.dataset.lang;
+              if (lg === 'en') document.body.classList.add('lang-en'); else document.body.classList.remove('lang-en');
+              localStorage.setItem('lang', lg);
+              // 切换语言后更新作物工具栏
+              (async () => {
+                const gameRes = await fetch(API_BASE + '/game/data');
+                const gameData = await gameRes.json();
+                const villageStatus = await (await fetch(API_BASE + '/village/status')).json();
+                renderCropToolbar(gameData, villageStatus);
+              })();
+            });
+          });
+        })();
+
+        // 启动
+        initGameUI();
+    </script>
+</body>
+</html>

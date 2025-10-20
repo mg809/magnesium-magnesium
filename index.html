@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!-- 页面入口：通过 React UMD 在浏览器运行 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人自我介绍</title>
+  
+  <!-- SEO 描述 -->
+  <meta name="description" content="陈壮壮的个人介绍网站 - 学生、前端开发者">
+
+  <!-- 预连接与预加载（提升首屏速度） -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" onload="this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></noscript>
+
+  <!-- 页面样式：本地 CSS -->
+  <link rel="stylesheet" href="./intro/styles.css">
+
+  <!-- Loading 动画所需的简单关键帧 -->
+  <style>
+    @keyframes pulse { 0%{width:10%} 50%{width:70%} 100%{width:30%} }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- React 应用挂载点（由 app.js 渲染） -->
+    <div style="text-align: center; padding: 50px;" id="loading">
+      <h1>正在加载个人介绍页面...</h1>
+      <div style="width: 100px; height: 4px; background: #eee; margin: 20px auto; border-radius: 2px;">
+        <div style="width: 60%; height: 100%; background: #6c5ce7; border-radius: 2px; animation: pulse 1.5s infinite;"></div>
+      </div>
+      <p>如果页面没有自动加载，请检查 JavaScript 是否启用</p>
+      <button onclick="location.reload()" style="margin-top: 20px; padding: 8px 16px;">重新加载</button>
+    </div>
+  </div>
+
+  <!-- 加载失败与慢速网络的回退方案 -->
+  <script>
+    // 全局脚本错误（含网络失败）回退
+    window.addEventListener('error', function() {
+      var loading = document.getElementById('loading');
+      if (loading) {
+        loading.innerHTML = '<h1 style="color: red;">加载失败</h1><p>请检查网络连接或刷新页面</p><button onclick="location.reload()">重新加载</button>';
+      }
+    });
+
+    // 10 秒后仍未完成挂载的提示
+    setTimeout(function(){
+      var app = document.getElementById('app');
+      if (app && app.children.length === 1) {
+        var loading = document.getElementById('loading');
+        if (loading) {
+          var h1 = loading.querySelector('h1');
+          var p = loading.querySelector('p');
+          if (h1) h1.textContent = '加载时间较长...';
+          if (p) p.textContent = '正在尝试重新连接';
+        }
+      }
+    }, 10000);
+  </script>
+  
+  <!-- 依赖脚本：保持顺序，使用 defer 不阻塞渲染 -->
+  <script defer crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js" onerror="console.error('React加载失败')"></script>
+  <script defer crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" onerror="console.error('ReactDOM加载失败')"></script>
+  <!-- 应用脚本：挂载 React 应用 -->
+  <script defer src="./intro/app.js"></script>
+</body>
+</html>

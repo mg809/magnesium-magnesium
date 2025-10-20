@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>游戏中心 - 中转页面</title>
+  <!-- 复用主站样式，保持视觉一致 -->
+  <link rel="stylesheet" href="../intro/styles.css" />
+  <style>
+    /* 中转页的轻量补充样式（仅影响本页） */
+    .gateway { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+    .gateway-inner { max-width: 1000px; width: 100%; }
+    .gateway-header { text-align: center; margin-bottom: 24px; }
+    .games-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .game-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.12); border: 1px solid rgba(255,255,255,0.4); }
+    .game-card h3 { margin: 0 0 8px; color: #2c3e50; }
+    .game-card p { margin: 0 0 16px; color: #34495e; }
+    .card-actions { display: flex; gap: 12px; }
+    .btn-link { display: inline-block; padding: 10px 18px; border-radius: 10px; font-weight: 600; text-decoration: none; color: white; background: linear-gradient(45deg, #6c5ce7, #a363d9); box-shadow: 0 4px 18px rgba(108,92,231,0.35); transition: transform .2s ease, box-shadow .2s ease; }
+    .btn-link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(108,92,231,0.45); }
+    .btn-secondary-link { background: transparent; color: #6c5ce7; border: 2px solid #6c5ce7; }
+    .btn-secondary-link:hover { background: #6c5ce7; color: #fff; }
+    .small { font-size: 0.9rem; color: #7f8c8d; }
+      /* i18n toggles */
+    .i18n-en { display: none; }
+    .lang-en .i18n-zh { display: none; }
+    .lang-en .i18n-en { display: inline; }
+    /* language toggle buttons */
+    .lang-toggle { display: inline-flex; gap: 8px; align-items: center; }
+    .lang-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #6c5ce7; background: #fff; color: #6c5ce7; cursor: pointer; }
+    .lang-btn:hover { background: #6c5ce7; color: #fff; }
+  </style>
+</head>
+<body>
+  <!-- 游戏中心：聚合多个小游戏入口 -->
+  <section class="gateway">
+    <div class="gateway-inner">
+      <div class="gateway-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <div>
+          <h1><span class="i18n-zh">小游戏中心</span><span class="i18n-en">Mini Games Hub</span></h1>
+          <p class="small"><span class="i18n-zh">选择一个游戏开始体验。遇到加载异常，请确认本地静态服务器已启动。</span><span class="i18n-en">Pick a game to play. If loading fails, please ensure the local static server is running.</span></p>
+        </div>
+        <div class="lang-toggle">
+          <button class="lang-btn" data-lang="zh">中文</button>
+          <button class="lang-btn" data-lang="en">English</button>
+        </div>
+      </div>
+      <div class="games-grid">
+        <!-- 农场经营游戏入口 -->
+        <div class="game-card">
+          <h3><span class="i18n-zh">农场经营</span><span class="i18n-en">Pixel Farm</span></h3>
+          <p><span class="i18n-zh">种植、浇水、收获，体验轻度模拟经营玩法。</span><span class="i18n-en">Plant, water, and harvest in a light simulation.</span></p>
+          <div class="card-actions">
+            <a class="btn-link" href="./farmer/farmer.html"><span class="i18n-zh">进入游戏</span><span class="i18n-en">Play</span></a>
+          </div>
+        </div>
+        <!-- 扫雷游戏入口 -->
+        <div class="game-card">
+          <h3><span class="i18n-zh">扫雷 Minesweeper</span><span class="i18n-en">Minesweeper</span></h3>
+          <p><span class="i18n-zh">经典 9×9 扫雷，支持插旗与连锁展开，计数与胜负判定。</span><span class="i18n-en">Classic 9×9 Minesweeper with flags and chain reveal.</span></p>
+          <div class="card-actions">
+            <a class="btn-link" href="./game2/扫雷.html"><span class="i18n-zh">进入游戏</span><span class="i18n-en">Play</span></a>
+          </div>
+        </div>
+        <!-- 后续可添加更多游戏卡片 -->
+      </div>
+      <div style="text-align:center; margin-top: 24px;">
+        <a class="btn-link btn-secondary-link" href="../index.html"><span class="i18n-zh">返回首页</span><span class="i18n-en">Home</span></a>
+      </div>
+    </div>
+  </section>
+  <!-- 备注：各游戏的具体逻辑在对应页面内实现 -->
+  <script>
+    (function() {
+      const saved = localStorage.getItem('lang');
+      if (saved === 'en') document.body.classList.add('lang-en');
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lg = btn.dataset.lang;
+          if (lg === 'en') document.body.classList.add('lang-en'); else document.body.classList.remove('lang-en');
+          localStorage.setItem('lang', lg);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

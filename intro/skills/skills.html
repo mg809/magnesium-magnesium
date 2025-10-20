@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的技能</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <style>
+    /* 返回箭头 */
+    .back {
+      position: fixed;
+      top: 12px;
+      left: 16px;
+      font-size: 28px;
+      font-weight: 700;
+      text-decoration: none;
+      color: #2c3e50;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background .15s ease;
+      z-index: 20;
+    }
+    .back:hover { background: rgba(0,0,0,0.06); }
+
+    /* 泡泡基础样式 */
+    .bubble { width: 160px; height: 160px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 24px; color: #fff; position: absolute; box-shadow: 0 16px 36px rgba(0,0,0,0.15); text-decoration: none; transition: transform .2s ease, box-shadow .2s ease; }
+    .bubble:hover { transform: scale(1.05); box-shadow: 0 24px 44px rgba(0,0,0,0.20); }
+    .bubble::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 24px rgba(255,255,255,0.35); pointer-events: none; }
+    .bubble-html { background: radial-gradient(circle at 30% 30%, #ff9a9e, #f56d91); }
+    .bubble-css { background: radial-gradient(circle at 30% 30%, #6dd5fa, #2980b9); }
+    .bubble-js { background: radial-gradient(circle at 30% 30%, #f6d365, #fda085); color: #2c3e50; }
+
+    /* 流动容器与动画 */
+    .bubble-area { position: fixed; top: 80px; left: 0; right: 0; bottom: 0; overflow: hidden; }
+    .float1 { left: 8%; top: 12%; animation: float1 14s ease-in-out infinite alternate; }
+    .float2 { left: 55%; top: 18%; animation: float2 16s ease-in-out infinite alternate; }
+    .float3 { left: 30%; top: 58%; animation: float3 18s ease-in-out infinite alternate; }
+    @keyframes float1 { 0%{transform:translate(0,0);} 25%{transform:translate(22%,-6%);} 50%{transform:translate(10%,16%);} 75%{transform:translate(35%,10%);} 100%{transform:translate(18%,26%);} }
+    @keyframes float2 { 0%{transform:translate(0,0);} 25%{transform:translate(-18%,10%);} 50%{transform:translate(6%,22%);} 75%{transform:translate(-10%,-8%);} 100%{transform:translate(14%,16%);} }
+    @keyframes float3 { 0%{transform:translate(0,0);} 25%{transform:translate(16%,-12%);} 50%{transform:translate(-8%,10%);} 75%{transform:translate(22%,6%);} 100%{transform:translate(-6%,18%);} }
+  </style>
+</head>
+<body>
+  <!-- 左上角返回箭头（优先浏览器返回，否则回主页） -->
+  <a class="back" href="../../index.html" onclick="if (history.length > 1) { history.back(); return false; }">←</a>
+
+  <!-- 统一背景：使用 body 渐变背景，无独立 hero 分区 -->
+
+  <!-- 三个流动的泡泡（带超链接） -->
+  <div class="bubble-area">
+    <a class="bubble bubble-html float1" href="./html.html" aria-label="HTML">HTML</a>
+    <a class="bubble bubble-css float2" href="./css.html" aria-label="CSS">CSS</a>
+    <a class="bubble bubble-js float3" href="./javascript.html" aria-label="JavaScript">JS</a>
+  </div>
+</body>
+</html>
