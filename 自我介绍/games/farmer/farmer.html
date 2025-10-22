@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素农场</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #f0f2f5;
+        }
+        
+        .game-container {
+            display: grid;
+            grid-template-columns: 200px 1fr 200px;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .resources-panel {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .game-field {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .field-plot {
+            aspect-ratio: 1;
+            background: #8B4513;
+            border: 2px solid #654321;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #fff;
+            transition: all 0.3s;
+        }
+
+        .field-plot:hover {
+            transform: scale(1.05);
+        }
+
+        .buildings-panel {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .resource-item, .building-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .weather {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        /* 退出顶部栏样式 */
+    .game-exit-bar { position: sticky; top: 0; z-index: 1000; background: rgba(255,255,255,0.95); box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .game-exit-bar .bar-inner { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .game-exit-bar .bar-title { color: #2c3e50; font-weight: 700; }
+    .game-exit-bar .bar-actions { display: flex; gap: 10px; }
+    .exit-btn { padding: 8px 12px; border-radius: 8px; font-weight: 600; text-decoration: none; color: #fff; background: linear-gradient(45deg, #6c5ce7, #a363d9); box-shadow: 0 4px 16px rgba(108,92,231,0.35); }
+    .exit-btn.secondary { background: transparent; color: #6c5ce7; border: 2px solid #6c5ce7; }
+    .exit-btn.secondary:hover { background: #6c5ce7; color: #fff; }
+        /* 浮动技能中转球与面板 */
+        .float-ball { position: fixed; left: calc(100vw - 88px); top: calc(100vh - 120px); width: 56px; height: 56px; border-radius: 50%; background: #6c5ce7; color:#fff; box-shadow: 0 8px 24px rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; font-size: 22px; cursor: grab; z-index: 9999; user-select: none; }
+        .float-ball:active { cursor: grabbing; }
+        .float-panel { position: fixed; min-width: 220px; background:#fff; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 12px; z-index: 9998; display:none; }
+        .float-panel.show { display:block; }
+        .float-panel h4 { margin: 6px 0 8px; font-size: 14px; color:#2c3e50; }
+        .action-row { display:flex; flex-wrap:wrap; gap:8px; }
+        .action-btn { padding:6px 10px; border-radius: 8px; border:1px solid #e0e0e0; background:#f8f9fb; color:#333; cursor:pointer; font-size: 13px; }
+        .action-btn.primary { background:#6c5ce7; color:#fff; border-color:#6c5ce7; }
+        .action-btn:hover { filter:brightness(0.98); }
+        /* i18n toggles */
+    .i18n-en { display: none; }
+    .lang-en .i18n-zh { display: none; }
+    .lang-en .i18n-en { display: inline; }
+    /* language toggle buttons */
+    .lang-toggle { display: flex; gap: 8px; align-items: center; margin-right: 8px; }
+    .lang-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #6c5ce7; background: #fff; color: #6c5ce7; cursor: pointer; }
+    .lang-btn:hover { background: #6c5ce7; color: #fff; }
+
+    /* 作物工具栏样式补齐 */
+    .crop-btn { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .crop-btn.active { border-color: #6c5ce7; background: #f3f2ff; color: #4834d4; }
+    .crop-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* 认证弹窗样式 */
+    .auth-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 10000; }
+    .auth-overlay.show { display: flex; }
+    .auth-card { width: 320px; background: #fff; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.2); padding: 16px; }
+    .auth-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+    .auth-tab { flex: 1; padding: 6px 8px; border-radius: 8px; border: 1px solid #e0e0e0; background: #f8f9fb; cursor: pointer; text-align: center; }
+    .auth-tab.active { background: #6c5ce7; color: #fff; border-color: #6c5ce7; }
+    .auth-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; margin: 6px 0; }
+    .auth-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+    .auth-msg { font-size: 12px; color: #e74c3c; min-height: 18px; }
+  </style>
+    <link rel="stylesheet" href="./styles/crops/cabbage.css">
+    <link rel="stylesheet" href="./styles/crops/carrot.css">
+</head>
+<body>
+  <div class="game-exit-bar">
+    <div class="bar-inner">
+      <div class="bar-title"><span class="i18n-zh">小游戏 · 像素农场</span><span class="i18n-en">Mini Game · Pixel Farm</span></div>
+      <div class="bar-actions">
+          <div class="lang-toggle">
+            <button class="lang-btn" data-lang="zh">中文</button>
+            <button class="lang-btn" data-lang="en">English</button>
+          </div>
+          <span id="auth-user" style="color:#2c3e50;font-weight:600;"></span>
+          <button class="action-btn" id="auth-open-btn">登录/注册</button>
+          <a class="exit-btn secondary" href="../中转.html"><span class="i18n-zh">返回游戏中心</span><span class="i18n-en">Game Hub</span></a>
+          <a class="exit-btn" href="../../index.html"><span class="i18n-zh">返回首页</span><span class="i18n-en">Home</span></a>
+        </div>
+    </div>
+  </div>
+    <div class="weather" id="weather">
+        <span class="i18n-zh">天气: 晴朗 ☀️</span><span class="i18n-en">Weather: Sunny ☀️</span>
+    </div>
+
+    <div class="game-container">
+        <div class="resources-panel" id="resources">
+            <h3>资源</h3>
+            <div class="resource-item">金钱: <span id="money">1000</span></div>
+            <div class="resource-item">水资源: <span id="water">100</span></div>
+            <h4>种子:</h4>
+            <div class="resource-item">水稻: <span id="rice-seeds">10</span></div>
+            <div class="resource-item">玉米: <span id="corn-seeds">10</span></div>
+            <div class="resource-item">蔬菜: <span id="vegetable-seeds">10</span></div>
+            <div class="resource-item">果树: <span id="fruit-seeds">5</span></div>
+            <!-- 新增：汇总种子与村庄信息（由脚本实时更新） -->
+            <div class="resource-item" id="seeds">种子：白菜0、胡萝卜0、水稻0、玉米0</div>
+            <div class="resource-item" id="village-info">村庄等级：1 | 粮食总量：0</div>
+        </div>
+
+        <div id="crop-toolbar" style="margin:10px 0; display:flex; gap:8px;"></div>
+        <div class="game-field" id="field"></div>
+
+        <div class="buildings-panel">
+            <h3>建筑</h3>
+            <div class="building-item">
+                农舍 (1000金)
+                <button class="button" onclick="buildStructure('house')">建造</button>
+            </div>
+            <div class="building-item">
+                水井 (500金)
+                <button class="button" onclick="buildStructure('well')">建造</button>
+            </div>
+            <div class="building-item">
+                仓库 (800金)
+                <button class="button" onclick="buildStructure('warehouse')">建造</button>
+            </div>
+            <div class="building-item">
+                市场 (2000金)
+                <button class="button" onclick="buildStructure('market')">建造</button>
+            </div>
+        </div>
+    <!-- 认证弹窗 -->
+    <div class="auth-overlay" id="auth-overlay">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <div class="auth-tab active" data-mode="login">登录</div>
+          <div class="auth-tab" data-mode="signup">注册</div>
+        </div>
+        <div>
+          <input class="auth-input" id="auth-email" type="email" placeholder="邮箱">
+          <input class="auth-input" id="auth-password" type="password" placeholder="密码">
+        </div>
+        <div class="auth-msg" id="auth-msg"></div>
+        <div class="auth-actions">
+          <button class="action-btn" id="auth-cancel">取消</button>
+          <button class="action-btn primary" id="auth-submit">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        const isFile = location.protocol === 'file:';
+        const isLocalHost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+        const overrideApi = localStorage.getItem('API_BASE_OVERRIDE');
+        const API_BASE = overrideApi || ((isLocalHost || isFile)
+          ? ('http://' + (location.hostname || 'localhost') + ':3000/api')
+          : '/api');
+        let gameState = {
+            selectedCrop: 'cabbage',
+            fieldIds: Array(12).fill(null),
+            serverFields: [],
+            seeds: {}
+        };
+        // --- 文案与请求工具 ---
+        function langIsEn() { return document.body.classList.contains('lang-en'); }
+        function t(zh, en) { return langIsEn() ? en : zh; }
+        const tokenKey = 'farmer_token';
+        function authToken() { return localStorage.getItem(tokenKey); }
+        function authHeaders() {
+          const h = { 'Content-Type': 'application/json' };
+          const tk = authToken(); if (tk) h['Authorization'] = 'Bearer ' + tk; return h;
+        }
+        const API = {
+          get: async (path) => {
+            const res = await fetch(API_BASE + path);
+            if (!res.ok) throw new Error('http_' + res.status);
+            return res.json();
+          },
+          post: async (path, body) => {
+            const res = await fetch(API_BASE + path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body || {}) });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || ('http_' + res.status));
+            return data;
+          }
+        };
+        // --- 用户状态显示 ---
+        function setAuthUser(email) {
+          const el = document.getElementById('auth-user');
+          if (el) el.textContent = email ? t(`已登录：${email}`, `Signed in: ${email}`) : '';
+        }
+        function showDomainInfo() {
+          const info = document.getElementById('village-info');
+          if (info) info.title = `Domain: ${location.origin}\nAPI: ${API_BASE}${overrideApi ? ' (override)' : ''}`;
+        }
+
+        function setApiBaseOverride() {
+          const current = localStorage.getItem('API_BASE_OVERRIDE') || '';
+          const placeholder = 'http://127.0.0.1:3000/api';
+          const msgZh = '请输入接口地址（以/api结尾）';
+          const msgEn = 'Enter API base (end with /api):';
+          const input = prompt(document.body.classList.contains('lang-en') ? msgEn : msgZh, current || placeholder);
+          if (!input) return;
+          try {
+            const u = new URL(input);
+            if (!u.protocol.startsWith('http')) throw new Error('protocol');
+            if (!u.pathname.endsWith('/api')) {
+              alert(document.body.classList.contains('lang-en') ? 'Path must end with /api' : '路径必须以/api结尾');
+              return;
+            }
+            localStorage.setItem('API_BASE_OVERRIDE', input);
+            alert(document.body.classList.contains('lang-en') ? 'Saved. Reloading...' : '已保存，页面将刷新');
+            location.reload();
+          } catch (e) {
+            alert(document.body.classList.contains('lang-en') ? 'Invalid URL' : 'URL不合法');
+          }
+        }
+
+        async function updateWeather() {
+          try {
+            const data = await API.get('/weather');
+            const el = document.getElementById('weather');
+            if (el) {
+              const map = { sunny: '晴朗 ☀️', rainy: '下雨 🌧️', cloudy: '多云 ☁️', stormy: '暴风雨 ⛈️' };
+              const zh = map[data.weather] || '晴朗 ☀️';
+              const enName = (data.weather || 'sunny');
+              const enTitle = enName.charAt(0).toUpperCase() + enName.slice(1);
+              el.innerHTML = `<span class="i18n-zh">天气: ${zh}</span><span class="i18n-en">Weather: ${enTitle}</span>`;
+            }
+          } catch (e) { /* 忽略错误 */ }
+        }
+
+        function renderCropToolbar(gameData, villageStatus) {
+            const toolbar = document.getElementById('crop-toolbar');
+            if (!toolbar) return;
+            toolbar.innerHTML = '';
+            const crops = ['cabbage', 'carrot', 'rice', 'corn'];
+            const isEn = document.body.classList.contains('lang-en');
+            const cropNames = {
+                cabbage: { zh: '白菜', en: 'Cabbage' },
+                carrot: { zh: '胡萝卜', en: 'Carrot' },
+                rice: { zh: '水稻', en: 'Rice' },
+                corn: { zh: '玉米', en: 'Corn' }
+            };
+            crops.forEach(type => {
+                if (!gameData.crops[type]) return;
+                const btn = document.createElement('button');
+                btn.className = 'crop-btn';
+                btn.dataset.crop = type;
+                const seedCount = villageStatus.resources?.seeds?.[type] ?? 0;
+                btn.disabled = seedCount <= 0;
+                const name = cropNames[type][isEn ? 'en' : 'zh'];
+                btn.textContent = `${name}(${seedCount})`;
+                btn.onclick = () => {
+                    gameState.selectedCrop = type;
+                    document.querySelectorAll('.crop-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                };
+                toolbar.appendChild(btn);
+            });
+            const active = toolbar.querySelector(`button[data-crop="${gameState.selectedCrop}"]`);
+            if (active) active.classList.add('active');
+        }
+
+        async function updateResources() {
+            const data = await API.get('/village/status');
+            gameState.seeds = data.resources?.seeds || {};
+            gameState.serverFields = data.fields || [];
+            // 更新钱与水显示
+            const moneyEl = document.getElementById('money');
+            if (moneyEl) moneyEl.textContent = data.resources?.money ?? 0;
+            const waterEl = document.getElementById('water');
+            if (waterEl) waterEl.textContent = data.resources?.water ?? 0;
+            // 更新仓库与等级
+            document.getElementById('wood').textContent = data.resources?.wood ?? 0;
+            document.getElementById('stone').textContent = data.resources?.stone ?? 0;
+            document.getElementById('grain').textContent = data.village?.grain ?? 0;
+            const villageInfo = document.getElementById('village-info');
+            if (villageInfo) villageInfo.textContent = t('村庄等级：' + (data.village?.level ?? 1), 'Level: ' + (data.village?.level ?? 1));
+            showDomainInfo();
+        }
+
+        function initializeField() {
+            const fieldElement = document.getElementById('field');
+            if (!fieldElement) return;
+            fieldElement.innerHTML = '';
+            for (let i = 0; i < 12; i++) {
+                const plot = document.createElement('div');
+                plot.className = 'field-plot';
+                fieldElement.appendChild(plot);
+            }
+        }
+
+        function updateFieldDisplay() {
+            const plots = document.getElementsByClassName('field-plot');
+            for (let index = 0; index < plots.length; index++) {
+                const plot = plots[index];
+                plot.classList.remove('crop-cabbage','crop-carrot','crop-rice','crop-corn');
+                const fieldId = gameState.fieldIds[index];
+                if (fieldId == null) { plot.textContent = '🟩'; continue; }
+                const field = gameState.serverFields[fieldId];
+                if (!field || !field.crop_type) { plot.textContent = '🟩'; continue; }
+                const type = field.crop_type;
+                plot.classList.add(`crop-${type}`);
+                if (!field.watered) plot.textContent = '🌱';
+                else if (!field.ready) plot.textContent = '🌿';
+                else plot.textContent = '🧺';
+            }
+        }
+
+        function bindFieldGrid() {
+            const plots = document.getElementsByClassName('field-plot');
+            for (let index = 0; index < plots.length; index++) {
+                const plot = plots[index];
+                plot.onclick = async () => {
+                    const fieldId = gameState.fieldIds[index];
+                    if (fieldId == null) {
+                        await plantCropAt(index);
+                    } else {
+                        const field = gameState.serverFields[fieldId];
+                        if (!field.watered) await waterFieldAt(index);
+                        else if (field.ready) await harvestFieldAt(index);
+                    }
+                };
+            }
+        }
+
+        async function initGameUI() {
+            try {
+                const gameRes = await fetch(API_BASE + '/game/data');
+                const gameData = await gameRes.json();
+                renderCropToolbar(gameData, { resources: { seeds: gameState.seeds }, village: { level: 1 } });
+                await updateResources();
+                await updateWeather();
+            } catch (e) {
+                const info = document.getElementById('village-info');
+                if (info) {
+                  info.textContent = '接口未接入或后端未启动（API: ' + API_BASE + '）';
+                  const btn = document.createElement('button');
+                  btn.textContent = t('手动设置API地址', 'Set API address');
+                  btn.style.marginLeft = '8px';
+                  btn.className = 'button';
+                  btn.onclick = setApiBaseOverride;
+                  info.appendChild(btn);
+                }
+                console.warn('API不可达：', API_BASE, e);
+            }
+        }
+
+        async function plantCropAt(index) {
+          const type = gameState.selectedCrop;
+          if (!type) return;
+            try {
+                const data = await API.post('/field/plant', { crop_type: type });
+                gameState.fieldIds[index] = data.field_id;
+                await updateResources();
+                const villageStatus = await API.get('/village/status');
+                const gameCrops = { crops: JSON.parse(localStorage.getItem('game_crops') || '{}') };
+                renderCropToolbar(gameCrops, villageStatus);
+            } catch (e) { console.warn('种植失败', e); }
+         }
+
+        async function waterFieldAt(index) {
+          const fieldId = gameState.fieldIds[index];
+          if (fieldId == null) return;
+            try { await API.post('/field/water', { field_id: fieldId }); await updateResources(); } catch(e) { console.warn('浇水失败', e); }
+         }
+
+        async function harvestFieldAt(index) {
+          const fieldId = gameState.fieldIds[index];
+          if (fieldId == null) return;
+            try { await API.post('/field/harvest', { field_id: fieldId }); gameState.fieldIds[index] = null; await updateResources(); } catch(e) { console.warn('收获失败', e); }
+         }
+
+        async function buildStructure(type) {
+          const res = await fetch(API_BASE + '/building/build', {
+             method: 'POST', headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ building_type: type })
+           });
+          if (res.ok) {
+             await updateResources();
+             alert(document.body.classList.contains('lang-en') ? 'Build succeeded' : '建造成功');
+          } else {
+             alert(document.body.classList.contains('lang-en') ? 'Build failed' : '建造失败');
+          }
+        }
+
+        // ESC 快捷键返回游戏中心
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            window.location.href = '../中转.html';
+          }
+        });
+
+        // 语言初始化与切换
+        (function() {
+          const saved = localStorage.getItem('lang');
+          if (saved === 'en') document.body.classList.add('lang-en');
+          document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const lg = btn.dataset.lang;
+              if (lg === 'en') document.body.classList.add('lang-en'); else document.body.classList.remove('lang-en');
+              localStorage.setItem('lang', lg);
+              // 切换语言后更新作物工具栏
+              (async () => {
+                const gameRes = await fetch(API_BASE + '/game/data');
+                const gameData = await gameRes.json();
+                const villageStatus = await (await fetch(API_BASE + '/village/status')).json();
+                renderCropToolbar(gameData, villageStatus);
+              })();
+            });
+          });
+        })();
+
+        // 认证弹窗逻辑
+        (function() {
+          const overlay = document.getElementById('auth-overlay');
+          const openBtn = document.getElementById('auth-open-btn');
+          const tabs = () => Array.from(document.querySelectorAll('.auth-tab'));
+          let mode = 'login';
+          function open() { overlay.classList.add('show'); }
+          function close() { overlay.classList.remove('show'); document.getElementById('auth-msg').textContent=''; }
+          openBtn && openBtn.addEventListener('click', open);
+          document.getElementById('auth-cancel').addEventListener('click', close);
+          tabs().forEach(t => t.addEventListener('click', () => {
+          tabs().forEach(x => x.classList.remove('active')); t.classList.add('active'); mode = t.dataset.mode;
+          }));
+          async function signup(email, password) {
+          const res = await fetch(API_BASE + '/auth/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error||'signup_failed');
+          return data;
+          }
+          async function login(email, password) {
+          const res = await fetch(API_BASE + '/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error||'login_failed');
+          return data;
+          }
+          document.getElementById('auth-submit').addEventListener('click', async () => {
+          const email = document.getElementById('auth-email').value.trim();
+          const password = document.getElementById('auth-password').value;
+          const msg = document.getElementById('auth-msg');
+          msg.textContent='';
+          if (!email || !password) { msg.textContent = '请输入邮箱与密码'; return; }
+          try {
+          if (mode === 'signup') {
+          await signup(email, password);
+          msg.style.color = '#27ae60'; msg.textContent = '注册成功，请登录';
+          } else {
+          const d = await login(email, password);
+          localStorage.setItem(tokenKey, d.token);
+          setAuthUser(email); close();
+          }
+          } catch (e) {
+          msg.style.color = '#e74c3c'; msg.textContent = (e && e.message) || '操作失败';
+          }
+          });
+          })();
+          // 启动
+          initGameUI();
+      </script>
+</body>
+</html>

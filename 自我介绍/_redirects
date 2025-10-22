@@ -1,0 +1,4 @@
+/api/*  https://REGION-PROJECT.cloudfunctions.net/farmerApi/:splat  200!
+# 请将 REGION-PROJECT 替换为你的函数完整域名，例如：
+# /api/*  https://us-central1-your-firebase-project.cloudfunctions.net/farmerApi/:splat  200!
+# 如果你部署在 Cloud Run，请改为 Cloud Run 服务地址（HTTPS）。

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>扫雷 Minesweeper</title>
+  <link rel="stylesheet" href="../intro/styles.css" />
+  <style>
+    .ms-container { max-width: 620px; margin: 40px auto; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.15); }
+    .ms-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .ms-stats { display: flex; gap: 16px; color: #2c3e50; }
+    .ms-board { display: grid; gap: 4px; justify-content: center; }
+    .ms-cell { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: #ecf0f1; color: #2c3e50; font-weight: 700; cursor: pointer; user-select: none; }
+    .ms-cell.revealed { background: #fff; box-shadow: inset 0 2px 6px rgba(0,0,0,0.08); cursor: default; }
+    .ms-cell.flag { background: #ffeaa7; color: #d35400; }
+    .ms-cell.mine.revealed { background: #ff6b6b; color: white; }
+    .ms-footer { margin-top: 16px; text-align: center; color: #34495e; }
+    .btn { padding: 8px 16px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; }
+    .btn-primary { background: linear-gradient(45deg, #6c5ce7, #a363d9); color: white; }
+    .btn-primary:hover { filter: brightness(1.05); }
+    /* 退出顶部栏样式 */
+    .game-exit-bar { position: sticky; top: 0; z-index: 1000; background: rgba(255,255,255,0.95); box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .game-exit-bar .bar-inner { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .game-exit-bar .bar-title { color: #2c3e50; font-weight: 700; }
+    .game-exit-bar .bar-actions { display: flex; gap: 10px; }
+    .exit-btn { padding: 8px 12px; border-radius: 8px; font-weight: 600; text-decoration: none; color: #fff; background: linear-gradient(45deg, #6c5ce7, #a363d9); box-shadow: 0 4px 16px rgba(108,92,231,0.35); }
+    .exit-btn.secondary { background: transparent; color: #6c5ce7; border: 2px solid #6c5ce7; }
+    .exit-btn.secondary:hover { background: #6c5ce7; color: #fff; }
+      /* i18n toggles */
+    .i18n-en { display: none; }
+    .lang-en .i18n-zh { display: none; }
+    .lang-en .i18n-en { display: inline; }
+    /* language toggle buttons */
+    .lang-toggle { display: flex; gap: 8px; align-items: center; }
+    .lang-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #6c5ce7; background: #fff; color: #6c5ce7; cursor: pointer; }
+    .lang-btn:hover { background: #6c5ce7; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="game-exit-bar">
+    <div class="bar-inner">
+      <div class="bar-title"><span class="i18n-zh">小游戏 · 扫雷</span><span class="i18n-en">Mini Game · Minesweeper</span></div>
+      <div class="bar-actions">
+        <div class="lang-toggle">
+          <button class="lang-btn" data-lang="zh">中文</button>
+          <button class="lang-btn" data-lang="en">English</button>
+        </div>
+        <a class="exit-btn secondary" href="../中转.html"><span class="i18n-zh">返回游戏中心</span><span class="i18n-en">Game Hub</span></a>
+        <a class="exit-btn" href="../../index.html"><span class="i18n-zh">返回首页</span><span class="i18n-en">Home</span></a>
+      </div>
+    </div>
+  </div>
+  <div class="ms-container">
+    <div class="ms-header">
+      <div class="ms-stats">
+        <div><span class="i18n-zh">雷数</span><span class="i18n-en">Mines</span>：<span id="mineCount">10</span></div>
+        <div><span class="i18n-zh">旗子</span><span class="i18n-en">Flags</span>：<span id="flagCount">0</span></div>
+      </div>
+      <div>
+        <button id="resetBtn" class="btn btn-primary"><span class="i18n-zh">重新开始</span><span class="i18n-en">Restart</span></button>
+      </div>
+    </div>
+    <div id="board" class="ms-board"></div>
+    <div id="status" class="ms-footer"></div>
+  </div>
+
+  <script>
+    const ROWS = 9, COLS = 9, MINES = 10;
+    let grid = [], mineSet = new Set(), flags = new Set(), revealed = new Set(), gameOver = false;
+
+    function idx(r, c) { return r + ':' + c; }
+    function inBounds(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
+
+    function generateMines(safeR = null, safeC = null) {
+      mineSet.clear();
+      while (mineSet.size < MINES) {
+        const r = Math.floor(Math.random() * ROWS);
+        const c = Math.floor(Math.random() * COLS);
+        if (safeR !== null && Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1) continue; // 首次点击安全区
+        mineSet.add(idx(r, c));
+      }
+    }
+
+    function buildGrid() {
+      grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      for (const m of mineSet) {
+        const [mr, mc] = m.split(':').map(Number);
+        grid[mr][mc] = -1; // mine
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = mr + dr, nc = mc + dc;
+            if (!inBounds(nr, nc) || (dr === 0 && dc === 0)) continue;
+            if (grid[nr][nc] !== -1) grid[nr][nc] += 1;
+          }
+        }
+      }
+    }
+
+    function renderBoard() {
+      const boardEl = document.getElementById('board');
+      boardEl.style.gridTemplateColumns = `repeat(${COLS}, 32px)`;
+      boardEl.innerHTML = '';
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'ms-cell';
+          cell.dataset.r = r; cell.dataset.c = c;
+          cell.oncontextmenu = (e) => e.preventDefault();
+          cell.addEventListener('mousedown', onCellMouseDown);
+          boardEl.appendChild(cell);
+        }
+      }
+      updateCounts();
+    }
+
+    function onCellMouseDown(e) {
+      if (gameOver) return;
+      const cell = e.currentTarget;
+      const r = Number(cell.dataset.r), c = Number(cell.dataset.c);
+      if (e.button === 2) {
+        toggleFlag(r, c);
+      } else if (e.button === 0) {
+        reveal(r, c, true);
+      }
+    }
+
+    function toggleFlag(r, c) {
+      const key = idx(r, c);
+      if (revealed.has(key)) return;
+      if (flags.has(key)) flags.delete(key); else flags.add(key);
+      const cellEl = getCellEl(r, c);
+      cellEl.classList.toggle('flag');
+      cellEl.textContent = cellEl.classList.contains('flag') ? '⚑' : '';
+      updateCounts();
+    }
+
+    function getCellEl(r, c) {
+      return document.querySelector(`.ms-cell[data-r="${r}"][data-c="${c}"]`);
+    }
+
+    function reveal(r, c, firstClick = false) {
+      const key = idx(r, c);
+      if (revealed.has(key) || flags.has(key)) return;
+
+      // 首次点击生成雷并保证安全
+      if (firstClick && revealed.size === 0) {
+        generateMines(r, c);
+        buildGrid();
+      }
+
+      if (mineSet.has(key)) {
+        getCellEl(r, c).classList.add('revealed', 'mine');
+        getCellEl(r, c).textContent = '💣';
+        endGame(false);
+        return;
+      }
+
+      floodReveal(r, c);
+      checkWin();
+    }
+
+    function floodReveal(sr, sc) {
+      const q = [[sr, sc]];
+      while (q.length) {
+        const [r, c] = q.shift();
+        const key = idx(r, c);
+        if (!inBounds(r, c) || revealed.has(key) || flags.has(key)) continue;
+        revealed.add(key);
+        const cellEl = getCellEl(r, c);
+        cellEl.classList.add('revealed');
+        const val = grid[r][c];
+        if (val > 0) {
+          cellEl.textContent = String(val);
+          cellEl.style.color = numberColor(val);
+        } else {
+          cellEl.textContent = '';
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              q.push([r + dr, c + dc]);
+            }
+          }
+        }
+      }
+    }
+
+    function numberColor(n) {
+      return {
+        1: '#1e3799', 2: '#16a085', 3: '#c0392b', 4: '#8e44ad', 5: '#d35400',
+        6: '#27ae60', 7: '#2c3e50', 8: '#7f8c8d'
+      }[n] || '#2c3e50';
+    }
+
+    function endGame(win) {
+      gameOver = true;
+      const status = document.getElementById('status');
+      if (!win) {
+        status.textContent = document.body.classList.contains('lang-en') ? 'Boom! Game Over' : '踩到雷了！游戏结束';
+        // 显示所有雷
+        for (const m of mineSet) {
+          const [mr, mc] = m.split(':').map(Number);
+          const el = getCellEl(mr, mc);
+          el.classList.add('revealed', 'mine');
+          el.textContent = '💣';
+        }
+      } else {
+        status.textContent = document.body.classList.contains('lang-en') ? 'Congrats, you win!' : '恭喜你，扫雷成功！';
+      }
+    }
+
+    function checkWin() {
+      // 胜利条件：所有非雷格都已展开
+      const totalSafe = ROWS * COLS - MINES;
+      if (revealed.size >= totalSafe) endGame(true);
+    }
+
+    function updateCounts() {
+      document.getElementById('mineCount').textContent = MINES;
+      document.getElementById('flagCount').textContent = flags.size;
+    }
+
+    function reset() {
+      mineSet.clear(); flags.clear(); revealed.clear(); gameOver = false;
+      // 先无雷渲染，首次点击后生成雷，避免首点炸
+      buildGrid();
+      renderBoard();
+      document.getElementById('status').textContent = '';
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', reset);
+
+    // 语言初始化与切换
+    (function() {
+      const saved = localStorage.getItem('lang');
+      if (saved === 'en') document.body.classList.add('lang-en');
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lg = btn.dataset.lang;
+          if (lg === 'en') document.body.classList.add('lang-en'); else document.body.classList.remove('lang-en');
+          localStorage.setItem('lang', lg);
+        });
+      });
+    })();
+
+    // ESC 快捷键返回游戏中心
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        window.location.href = '../中转.html';
+      }
+    });
+    // 初始化
+    reset();
+  </script>
+</body>
+</html>
